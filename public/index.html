@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Visual Sounds</title>
+    <style>
+      html { margin-bottom: 5em;}
+      body {z-index: 1; background-color: black; color: white; font-family: monospace; font-size: 22px; }
+      div { padding: 0.5vw;}
+      .action {
+        padding: 1em;
+        background-color: blueviolet;
+        color: white;
+        cursor: pointer;
+        position: fixed;
+        bottom: 0;
+        left:0;
+        right: 0;
+      }
+
+      .rd-action {
+        padding: auto;
+        margin: auto;
+        position: absolute;
+        z-index: 2;
+        border-radius: 50%;
+        width: 5vw;
+        height: 5vw;
+        bottom: 5vh;
+        right: 5vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .fs {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+      #adder {
+        display: none;
+        padding: 2em;
+        z-index: 3;
+        background-color: black; color: white;
+      }
+
+      #adder-input {
+        border: 2px solid white;
+        padding: 1em;
+        margin: 1em;
+      }
+
+      #editor {
+        display: none;
+        z-index: 4;
+        background-color: black; color: white;
+        padding: 2em;
+      }
+
+      *[contenteditable=true] {
+        border: 1px dashed grey;
+      }
+
+      *[contenteditable=true]:hover {
+        border: 1px dashed grey;
+      }
+
+      *[onclick] {
+        cursor: pointer;
+        transition: all 200ms ease;
+      }
+
+      *[onclick]:hover {
+        color: navy;
+      }
+      .line { 
+        margin-bottom: 1.5em;
+      }
+
+      #viewer {
+        display: none;
+      }
+
+      #index {
+        display: none;
+        padding: 2em;
+      }
+
+      .song {
+        cursor: pointer;
+        padding: 0.5em;
+        transition: all 200ms ease;
+      }
+
+      .song:hover {
+        color: blueviolet;
+      }
+
+      label {
+        font-size: 0.8em;
+        padding-top: 0.8em;
+        display: block;
+        color: #ccc;
+      }
+
+      .df {
+        display: flex;
+      }
+
+
+    </style>
+    <script src="s.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script>
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCNjcYt1sn3b0GzpkeQ1iBa8ksBsU8R31I",
+        authDomain: "visualsounds.firebaseapp.com",
+        databaseURL: "https://visualsounds-default-rtdb.firebaseio.com",
+        projectId: "visualsounds",
+        storageBucket: "visualsounds.appspot.com",
+        messagingSenderId: "296324959181",
+        appId: "1:296324959181:web:76d9cfe2e98312144b5284",
+        measurementId: "G-DSBTDK8FYY"
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      
+      const db = firebase.database()
+      const auth = firebase.auth()
+
+    </script>
+  </head>
+  <body>
+    <main>
+      <div class="rd-action action" onclick="show('adder')"><div>+</div></div>
+
+      <div id="index" class="fs">
+        
+      </div>
+  
+      <div id="viewer" class="fs">
+  
+      </div>
+  
+      <div id="adder" class="fs">
+        <div onclick="hide('adder')" style="text-align: center;">X close</div>
+        Paste the lyrics:
+        <div id="adder-input" contenteditable="true"></div>
+        <div class="action" onclick="addSong()">add</div>
+      </div>
+  
+      <div id="editor" class="fs">
+  
+        <div onclick="hide('editor')" style="text-align: center;">X close</div>
+  
+        <label>Artist</label>
+        <div class="artist" contenteditable="true"></div>
+  
+        <label>Name</label>
+        <div class="name" contenteditable="true"></div>
+  
+        <label>Tempo</label>
+        <div class="tempo" contenteditable="true"></div>
+  
+        <label>Link</label>
+        <div class="link" contenteditable="true"></div>
+  
+        <label>Words</label>
+        <div class="lines"></div>
+  
+        <div class="action" onclick="saveSong()">save</div>
+      </div>
+    </main>
+
+    <script>
+      var songs = []
+      var song = {}
+      var songIndex = null
+
+      showSongs()
+
+      function showSongs() {
+        const index = e('index')
+        ih(index, '')
+
+        if(dg('songs')) {
+          songs = dgo('songs')
+        }
+
+        for(s in songs) {
+          const songEl = ce({e: 'div', c: 'song', t: songs[s].artist + ' - ' + songs[s].name, a: {onclick: 'showSong(' + s + 
+        ')'}})
+
+          add(index, songEl)
+        }
+
+        show('index')
+      }
+
+      function addSong() {
+        song = {}
+        var lyrics = e('adder-input').innerText
+        song.lines = lyrics.split(/\r?\n/)
+
+        editSong()
+      }
+
+      function editSong() {
+        const editor = e('editor')
+        
+        if(song.artist) { t(qe(editor, '.artist'), song.artist) }
+        if(song.name) { t(qe(editor, '.name'), song.name) }
+        if(song.link) { t(qe(editor, '.link'), song.link) }
+
+        if(song.lines) {
+          const lines = qe(editor, '.lines')
+          ih(lines, '')
+          for(line of song.lines) { 
+            add(lines, createLine(line))
+          }
+        }
+
+        show('editor')
+        hide('adder')
+        ih(e('adder-input'), '')
+      }
+
+      function createLine(text) {
+        return ce({e: 'div', c: 'line', t: text, a: {contenteditable: 'true', onkeydown: 'lineKeyDown(event, this)'}})
+      }
+
+      function lineKeyDown(event, el) {
+        if(event.key === 'Backspace' || event.key === 'Delete') {
+          if(el.innerText < 1 || event.ctrlKey) {
+            event.preventDefault()
+            if(el.previousElementSibling) {
+              el.previousSibling.focus()
+            }
+            else if(el.nextElementSibling) {
+              el.nextSibling.focus()
+            }
+            el.remove()
+          }
+        }
+        else if(event.key === 'Enter') {
+          if(event.ctrlKey) {
+            event.preventDefault()
+            el.after(createLine(''))
+            setTimeout(el.nextSibling.focus(), 100)
+          }
+        }
+        else if(event.key === 'ArrowDown') {
+          if(el.nextElementSibling) {
+            if(event.ctrlKey) {
+              const clone = el.cloneNode(true)
+              el.nextSibling.after(clone)
+              el.remove()
+              clone.focus()
+            }
+            else {
+              el.nextSibling.focus()
+            }
+            
+          }
+        }
+        else if(event.key === 'ArrowUp') {
+          if(el.previousElementSibling) {
+            if(event.ctrlKey) {
+              const clone = el.previousSibling.cloneNode(true)
+              el.previousSibling.replaceWith(el)
+              el.after(clone)
+              el.focus()
+            }
+            else {
+              el.previousSibling.focus()
+            }
+          }
+        }
+      }
+
+      function saveSong() {
+        const editor = e('editor')
+
+        song.artist = qe(editor, '.artist').innerText
+        song.name = qe(editor, '.name').innerText
+        song.link = qe(editor, '.link').innerText
+
+        const linesEl = qe(editor, '.lines')
+        var lines = []
+
+        for(line of linesEl.children) {
+          lines.push(line.innerText)
+        }
+        song.lines = lines
+
+        if(songIndex != null) {
+          songs[songIndex] = song
+          songIndex = null
+        }
+        else {
+          songs.push(song)
+        }
+
+        dso('songs', songs)
+
+        hide('editor')
+        showSongs()
+      }
+
+      function showSong(i) {
+        songIndex = i
+        song = songs[i]
+        editSong()
+      }
+
+      var tempoClicks = []
+
+      function tempoClick() {
+
+      }
+    </script>
+  </body>
+</html>
+
+
